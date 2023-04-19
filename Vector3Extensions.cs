@@ -10,4 +10,9 @@ public class Vector3Extensions
         Vector3 AV = value - a;
         return Mathf.Clamp01(Vector3.Dot(AV, AB) / Vector3.Dot(AB, AB));
     }
+    
+    public static Vector3 RelativeLocalPosition(Transform parent, Transform child)
+    {
+        return parent.InverseTransformPoint(child.position);
+    }
 }
