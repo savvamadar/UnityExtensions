@@ -51,4 +51,13 @@ public static class QuaternionExtensions
     {
         return b * a;
     }
+
+    public static Quaternion RelativeLocalRotation(Transform parent, Transform child)
+    {
+        if(parent == child)
+        {
+            return parent.localRotation;
+        }
+        return Quaternion.Inverse(parent.rotation) * child.rotation;
+    }
 }
