@@ -88,9 +88,14 @@ public static class NavMeshExtensions
 
     public static List<OffMeshLinkSimple> GetOffMeshLinks()
     {
+        return GetOffMeshLinks(SceneManager.GetActiveScene());
+    }
+
+    public static List<OffMeshLinkSimple> GetOffMeshLinks(Scene scene)
+    {
         List<OffMeshLinkSimple> l = new List<OffMeshLinkSimple>();
 
-        NavMeshData nmd = GetNavMeshData(SceneManager.GetActiveScene());
+        NavMeshData nmd = GetNavMeshData(scene);
 
         if(nmd != null)
         {
