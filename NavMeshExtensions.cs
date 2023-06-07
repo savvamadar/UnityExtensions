@@ -111,6 +111,8 @@ public static class NavMeshExtensions
                     ofms.start = offMeshLinkProperty.FindPropertyRelative("m_Start").vector3Value;
                     ofms.end = offMeshLinkProperty.FindPropertyRelative("m_End").vector3Value;
                     ofms.biDirectional = offMeshLinkProperty.FindPropertyRelative("m_LinkType").intValue == 2;
+                    
+                    l.Add(ofms);
                 }
             }
         }
