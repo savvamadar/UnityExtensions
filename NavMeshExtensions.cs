@@ -10,6 +10,27 @@ using UnityEngine.SceneManagement;
 using System.IO;
 using UnityEditor;
 
+public class NavMeshEdge
+{
+    public NavMeshEdge(Vector3 s, Vector3 e, Vector3 n)
+    {
+        normal = n;
+        start = s;
+        end = e;
+    }
+
+    public NavMeshEdge()
+    {
+        normal = Vector3.zero;
+        start = Vector3.zero;
+        end = Vector3.zero;
+    }
+
+    public Vector3 normal;
+    public Vector3 start;
+    public Vector3 end;
+
+}
 
 public class OffMeshLinkSimple
 {
@@ -17,6 +38,7 @@ public class OffMeshLinkSimple
     public Vector3 end;
     public bool biDirectional = false;
 }
+
 #endif
 
 public static class NavMeshExtensions
@@ -111,7 +133,7 @@ public static class NavMeshExtensions
                     ofms.start = offMeshLinkProperty.FindPropertyRelative("m_Start").vector3Value;
                     ofms.end = offMeshLinkProperty.FindPropertyRelative("m_End").vector3Value;
                     ofms.biDirectional = offMeshLinkProperty.FindPropertyRelative("m_LinkType").intValue == 2;
-                    
+
                     l.Add(ofms);
                 }
             }
@@ -119,6 +141,148 @@ public static class NavMeshExtensions
 
         return l;
     }
+
+    public static Vector3[] GetBounds(NavMeshData _nmd)
+    {
+        Vector3[] bounds = new Vector3[2] { Vector3.zero, Vector3.zero };
+        Bounds b = _nmd.sourceBounds;
+        bounds[0] = b.min;
+        bounds[1] = b.max;
+
+        return bounds;
+    }
+
+    public static Vector3 GetDimensions(NavMeshData _nmd)
+    {
+        Vector3[] bounds = GetBounds(_nmd);
+        return bounds[1] - bounds[0];
+    }
+
+    public static float GetNavMeshAgentRadius(NavMeshData _nmd)
+    {
+        SerializedObject serializedObject = new SerializedObject(_nmd);
+        SerializedProperty serializedNavSettings = serializedObject.FindProperty("m_NavMeshBuildSettings");
+
+        return serializedNavSettings.FindPropertyRelative("agentRadius").floatValue;
+    }
+
+    public static List<Vector3> GetInnerEdgePoints(NavMeshData _nmd)
+    {
+        Vector3[] outterBounds = GetBounds(_nmd);
+
+        float navAgentRadius = GetNavMeshAgentRadius(_nmd);
+
+        NavMeshTriangulation navmeshData = NavMesh.CalculateTriangulation();
+
+        List<Vector3> innerEdgePoints = new List<Vector3>();
+
+        Vector3[] vertices = navmeshData.vertices;
+
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            NavMeshHit nmh;
+
+            bool skip = ((vertices[i].x - navAgentRadius) * 1.001f <= outterBounds[0].x);
+            skip = skip || ((vertices[i].x + navAgentRadius) * 1.001f >= outterBounds[1].x);
+            skip = skip || ((vertices[i].z - navAgentRadius) * 1.001f <= outterBounds[0].z);
+            skip = skip || ((vertices[i].z + navAgentRadius) * 1.001f >= outterBounds[1].z);
+
+            if (!skip && NavMesh.FindClosestEdge(vertices[i], out nmh, -1) && nmh.distance <= 0.0001f)
+            {
+                innerEdgePoints.Add(vertices[i]);
+            }
+
+        }
+
+        return innerEdgePoints;
+    }
+
+    public static List<NavMeshEdge> CalculateEdges(List<Vector3> edgePoints, float agentRadius)
+    {
+        List<NavMeshEdge> navMeshEdges = new List<NavMeshEdge>();
+        for (int i = 0; i < edgePoints.Count; i++)
+        {
+            for (int j = 0; j < edgePoints.Count; j++)
+            {
+                if (j != i)
+                {
+                    NavMeshPath nmp = new NavMeshPath();
+                    if (NavMesh.CalculatePath(edgePoints[i], edgePoints[j], -1, nmp) && nmp.status == NavMeshPathStatus.PathComplete)
+                    {
+                        bool validPath = true;
+                        int pathPieces = 20;
+                        Vector3 headingPiece = (edgePoints[j] - edgePoints[i]) / ((float)pathPieces);
+                        Vector3 currentMoveAmount = Vector3.zero;
+                        Dictionary<string, Vector3> modeNV = new Dictionary<string, Vector3>();
+                        Dictionary<string, int> modeN = new Dictionary<string, int>();
+
+                        for (int parts = 0; parts < pathPieces; parts++)
+                        {
+                            currentMoveAmount += headingPiece;
+
+                            if (!NavMesh.SamplePosition(edgePoints[i] + currentMoveAmount, out _, 0.1f, -1))
+                            {
+                                validPath = false;
+                                break;
+                            }
+                            else
+                            {
+                                NavMeshHit nmhEdge;
+                                bool hasEdge = NavMesh.FindClosestEdge(edgePoints[i] + currentMoveAmount, out nmhEdge, -1);
+                                if (!hasEdge)
+                                {
+                                    validPath = false;
+                                    break;
+                                }
+                                else
+                                {
+                                    if (nmhEdge.distance > 0.1f)
+                                    {
+                                        validPath = false;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        string f2 = nmhEdge.normal.ToString("F2");
+                                        if (!modeN.ContainsKey(f2))
+                                        {
+                                            modeNV[f2] = nmhEdge.normal;
+                                            modeN[f2] = 0;
+                                        }
+                                        modeN[f2]++;
+                                    }
+                                }
+
+                            }
+                        }
+
+                        if (validPath)
+                        {
+                            int greatestCount = 0;
+                            Vector3 modeNormal = Vector3.zero;
+
+                            foreach (var kp in modeN)
+                            {
+                                if (greatestCount < kp.Value)
+                                {
+                                    greatestCount = kp.Value;
+                                    modeNormal = modeNV[kp.Key];
+                                }
+                            }
+
+                            modeNormal.y = 0f;
+
+                            navMeshEdges.Add(new NavMeshEdge(edgePoints[i], edgePoints[j], modeNormal));
+                        }
+                    }
+                }
+            }
+        }
+
+        return navMeshEdges;
+
+    }
+
 #endif
 
     private static Dictionary<int, List<int>> GetSubMeshData(NavMeshTriangulation navmeshData)
