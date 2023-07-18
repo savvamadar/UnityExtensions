@@ -108,21 +108,22 @@ public static class NavMeshExtensions
         return GetNavMeshData(SceneManager.GetActiveScene());
     }
 
-    public static List<OffMeshLinkSimple> GetOffMeshLinks()
-    {
-        return GetOffMeshLinks(SceneManager.GetActiveScene());
-    }
-
-    public static List<OffMeshLinkSimple> GetOffMeshLinks(Scene scene)
+    public static List<OffMeshLinkSimple> GetOffMeshLinks(NavMeshData _nmd, bool rayCastCorrect = false)
     {
         List<OffMeshLinkSimple> l = new List<OffMeshLinkSimple>();
 
-        NavMeshData nmd = GetNavMeshData(scene);
+        NavMeshData nmd = _nmd;
 
-        if(nmd != null)
+        if (nmd != null)
         {
             SerializedObject serializedObject = new SerializedObject(nmd);
+
             SerializedProperty serializedPropertyMyArray = serializedObject.FindProperty("m_OffMeshLinks");
+
+            float maxDrop = GetGeneratedOffMeshDropHeight(nmd);
+            float maxJump = GetGeneratedOffMeshJumpHeight(nmd);
+            float radius = GetNavMeshAgentRadius(nmd);
+
             if (serializedPropertyMyArray.isArray && serializedPropertyMyArray.arraySize > 0)
             {
                 for (int i = 0; i < serializedPropertyMyArray.arraySize; i++)
@@ -133,13 +134,63 @@ public static class NavMeshExtensions
                     ofms.start = offMeshLinkProperty.FindPropertyRelative("m_Start").vector3Value;
                     ofms.end = offMeshLinkProperty.FindPropertyRelative("m_End").vector3Value;
                     ofms.biDirectional = offMeshLinkProperty.FindPropertyRelative("m_LinkType").intValue == 2;
+                    bool add = !rayCastCorrect;
+                    if (rayCastCorrect)
+                    {
+                        Vector3 down_start = ofms.end + Vector3.up * 1000f;
+                        RaycastHit hit;
+                        if(Physics.Raycast(ofms.end, Vector3.up, out hit, Mathf.Infinity, -1, QueryTriggerInteraction.Ignore))
+                        {
+                            down_start = hit.point;
+                        }
 
-                    l.Add(ofms);
+                        if (Physics.Raycast(down_start, Vector3.down, out hit, Mathf.Infinity, -1, QueryTriggerInteraction.Ignore))
+                        {
+                            Vector3 dir = (hit.point - ofms.start);
+                            if(dir.y >= 0f)
+                            {
+                                if (dir.magnitude <= maxDrop)
+                                {
+                                    NavMeshHit nmh;
+                                    if (NavMesh.SamplePosition(hit.point, out nmh, radius, -1))
+                                    {
+                                        ofms.end = nmh.position;
+                                        add = true;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if(dir.magnitude <= maxJump)
+                                {
+                                    NavMeshHit nmh;
+                                    if (NavMesh.SamplePosition(hit.point, out nmh, radius, -1))
+                                    {
+                                        ofms.end = nmh.position;
+                                        add = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (add) {
+                        l.Add(ofms);
+                    }
                 }
             }
         }
+        else
+        {
+            Debug.LogError("NavMeshData = Null");
+        }
 
         return l;
+    }
+
+    public static List<OffMeshLinkSimple> GetOffMeshLinks(Scene scene, bool useRayCastCorrect = false)
+    {
+        return GetOffMeshLinks(GetNavMeshData(scene), useRayCastCorrect);
     }
 
     public static Vector3[] GetBounds(NavMeshData _nmd)
@@ -164,6 +215,22 @@ public static class NavMeshExtensions
         SerializedProperty serializedNavSettings = serializedObject.FindProperty("m_NavMeshBuildSettings");
 
         return serializedNavSettings.FindPropertyRelative("agentRadius").floatValue;
+    }
+
+    public static float GetGeneratedOffMeshDropHeight(NavMeshData _nmd)
+    {
+        SerializedObject serializedObject = new SerializedObject(_nmd);
+        SerializedProperty serializedNavSettings = serializedObject.FindProperty("m_NavMeshBuildSettings");
+
+        return serializedNavSettings.FindPropertyRelative("ledgeDropHeight").floatValue;
+    }
+
+    public static float GetGeneratedOffMeshJumpHeight(NavMeshData _nmd)
+    {
+        SerializedObject serializedObject = new SerializedObject(_nmd);
+        SerializedProperty serializedNavSettings = serializedObject.FindProperty("m_NavMeshBuildSettings");
+
+        return serializedNavSettings.FindPropertyRelative("maxJumpAcrossDistance").floatValue;
     }
 
     public static List<Vector3> GetInnerEdgePoints(NavMeshData _nmd)
