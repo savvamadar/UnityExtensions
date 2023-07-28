@@ -19,4 +19,25 @@ public static class Vector3Extensions
         }
         return parent.InverseTransformPoint(child.position);
     }
+
+    public static void Ceil(ref this Vector3 v)
+    {
+        v.x = Mathf.Ceil(v.x);
+        v.y = Mathf.Ceil(v.y);
+        v.z = Mathf.Ceil(v.z);
+    }
+
+    public static void Floor(ref this Vector3 v)
+    {
+        v.x = Mathf.Floor(v.x);
+        v.y = Mathf.Floor(v.y);
+        v.z = Mathf.Floor(v.z);
+    }
+
+    public static void Round(ref this Vector3 v)
+    {
+        v.x = Mathf.Round(v.x);
+        v.y = Mathf.Round(v.y);
+        v.z = Mathf.Round(v.z);
+    }
 }
