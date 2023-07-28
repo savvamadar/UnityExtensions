@@ -193,6 +193,53 @@ public static class NavMeshExtensions
         return GetOffMeshLinks(GetNavMeshData(scene), useRayCastCorrect);
     }
 
+    public static Vector3[] GetBounds()
+    {
+        NavMeshTriangulation navmeshData = NavMesh.CalculateTriangulation();
+
+        Vector3[] vertices = navmeshData.vertices;
+
+        Vector3[] bounds = new Vector3[] { Vector3.zero, Vector3.zero };
+        bounds[0] = vertices[0];
+        bounds[1] = vertices[0];
+
+        for(int i=1; i < vertices.Length; i++)
+        {
+            if(bounds[0].x < vertices[i].x)
+            {
+                bounds[0].x = vertices[i].x;
+            }
+            if (bounds[0].y < vertices[i].y)
+            {
+                bounds[0].y = vertices[i].y;
+            }
+            if (bounds[0].z < vertices[i].z)
+            {
+                bounds[0].z = vertices[i].z;
+            }
+
+
+            if (bounds[1].x > vertices[i].x)
+            {
+                bounds[1].x = vertices[i].x;
+            }
+            if (bounds[1].y > vertices[i].y)
+            {
+                bounds[1].y = vertices[i].y;
+            }
+            if (bounds[1].z > vertices[i].z)
+            {
+                bounds[1].z = vertices[i].z;
+            }
+
+        }
+
+        bounds[0].Floor();
+        bounds[1].Ceil();
+
+        return bounds;
+    }
+
     public static Vector3[] GetBounds(NavMeshData _nmd)
     {
         Vector3[] bounds = new Vector3[2] { Vector3.zero, Vector3.zero };
@@ -201,6 +248,12 @@ public static class NavMeshExtensions
         bounds[1] = b.max;
 
         return bounds;
+    }
+
+    public static Vector3 GetCenter(NavMeshData _nmd)
+    {
+        Vector3[] bounds = GetBounds(_nmd);
+        return (bounds[1] + bounds[0])/2f;
     }
 
     public static Vector3 GetDimensions(NavMeshData _nmd)
