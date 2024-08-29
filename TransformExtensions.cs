@@ -11,7 +11,6 @@ public static class TransformExtensions
             return;
         }
 
-
         t.position = wPos;
         t.rotation = wRot;
     }

@@ -4,29 +4,34 @@ using UnityEngine;
 
 public static class MaterialExtensions
 {
-    private static string instanceString = " (Instance)";
-    public static string nonInstancedName(this Material m)
+    private static string _InstanceString = " (Instance)";
+    public static string NonInstancedName(this Material m)
     {
         if (m == null)
         {
             return null;
         }
 
-        string s = m.name;
-        while(s.EndsWith(instanceString))
+        if (!m.IsInstanced())
         {
-            s = s.Substring(0, s.Length - instanceString.Length);
+            return m.name;
+        }
+
+        string s = m.name;
+        while(s.EndsWith(_InstanceString))
+        {
+            s = s.Substring(0, s.Length - _InstanceString.Length);
         }
         return s;
     }
 
-    public static bool isInstanced(this Material m)
+    public static bool IsInstanced(this Material m)
     {
         if(m == null)
         {
             return false;
         }
 
-        return m.name.EndsWith(instanceString);
+        return m.name.EndsWith(_InstanceString);
     }
 }

@@ -487,4 +487,24 @@ public static class NavMeshExtensions
 
         return ms;
     }
+
+    public static Vector3 GetCenter()
+    {
+        return GetCenter(GetBounds());
+    }
+
+    public static Vector3 GetCenter(Vector3[] bounds)
+    {
+        return (bounds[1] + bounds[0]) / 2f;
+    }
+
+    public static Vector3 GetDimensions()
+    {
+        return GetDimensions(GetBounds());
+    }
+
+    public static Vector3 GetDimensions(Vector3[] bounds)
+    {
+        return bounds[1] - bounds[0];
+    }
 }
