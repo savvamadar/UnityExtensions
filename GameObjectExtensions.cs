@@ -4,19 +4,26 @@ using UnityEngine;
 
 public static class GameObjectExtensions
 {
-    public static void SetLayerRecursive(this Transform t, int new_layer)
+
+    public static void PositionRotation(this GameObject go, Vector3 wPos, Quaternion wRot)
     {
-        if (t == null)
+        if (go == null)
         {
             return;
         }
 
-        t.gameObject.layer = new_layer;
 
-        for (int i = 0; i < t.childCount; i++)
+        go.transform.PositionRotation(wPos, wRot);
+    }
+
+    public static void LocalPositionRotation(this GameObject go, Vector3 lPos, Quaternion lRot)
+    {
+        if (go == null)
         {
-            SetLayerRecursive(t.GetChild(i), new_layer);
+            return;
         }
+
+        go.transform.LocalPositionRotation(lPos, lRot);
     }
 
     public static void SetLayerRecursive(this GameObject go, int new_layer)
@@ -25,11 +32,17 @@ public static class GameObjectExtensions
         {
             return;
         }
-        SetLayerRecursive(go.transform, new_layer);
+
+        go.transform.SetLayerRecursive(new_layer);
     }
 
     public static T GetOrAddComponent<T>(this GameObject go) where T : UnityEngine.Component
     {
+        if(go == null)
+        {
+            return null;
+        }
+
         T c = go.GetComponent<T>();
         if(c == null)
         {

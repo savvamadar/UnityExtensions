@@ -4,6 +4,36 @@ using UnityEngine;
 
 public static class QuaternionExtensions
 {
+    [System.Serializable]
+    public class SerializableQuaternion
+    {
+        public float x;
+        public float y;
+        public float z;
+        public float w;
+
+        public SerializableQuaternion(float rX, float rY, float rZ, float rW)
+        {
+            x = rX;
+            y = rY;
+            z = rZ;
+            w = rW;
+        }
+
+        public SerializableQuaternion(Quaternion quaternion)
+        {
+            x = quaternion.x;
+            y = quaternion.y;
+            z = quaternion.z;
+            w = quaternion.w;
+        }
+
+        public Quaternion ToQuaternion()
+        {
+            return new Quaternion(x, y, z, w);
+        }
+    }
+
     public static float InverseLerp(Quaternion a, Quaternion b, Quaternion value)
     {
         float maxDiff = Quaternion.Angle(a, b);
